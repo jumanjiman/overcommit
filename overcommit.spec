@@ -76,4 +76,7 @@ fi
 * Tue Feb 08 2011 Paul Morgan <jumanjiman@gmail.com> 0.1-1
 - new package built with tito
 
+* Tue Feb 08 2011 Paul Morgan <jumanjiman@gmail.com> 0.1-1
+- new package built with tito
+
 
