@@ -64,7 +64,7 @@ start() {
 	# per 
 	# http://refspecs.freestandards.org/LSB_3.1.1/LSB-Core-generic/LSB-Core-generic/iniscrptact.html
 	# this should return 0 if we are started, even on a service already running
-	status
+	/usr/sbin/apply-sysctl -V $START
 	_rc=$?
 
 	[ $_rc -eq 0 ] && echo_success || echo_failure
