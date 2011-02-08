@@ -1,0 +1,26 @@
+The init script requires two variables to be defined:
+* START=/path/to/config
+  This config file is used when running 'service overcommit start'
+* STOP=/path/to/config
+  This config file is used when running 'service overcommit stop'
+
+The START and STOP variables may be defined in /etc/sysconfig/overcommit.
+If that file does not exist, the init script defaults to using:
+* START=/etc/overcommit/never-overcommit.conf
+* STOP=/etc/overcommit/default-overcommit.conf
+
+The above semantics mean that you should never
+modify a file provided by this package. This keeps
+the output of `rpm --verify overcommit' clean.
+
+This package includes three policies:
+* /etc/overcommit/default-overcommit.conf
+* /etc/overcommit/always-overcommit.conf
+* /etc/overcommit/never-overcommit.conf
+
+The third policy, never-overcommit.conf, sets
+the policy + 90% of physical RAM.
+
+To set a different amount of physical ram, you should: 
+1. copy never-overcommit.conf and modify as needed
+2. create /etc/sysconfig/overcommit and adjust the STOP variable

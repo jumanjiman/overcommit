@@ -1,0 +1,10 @@
+# This sample config controls the startup policy
+# for the "overcommit" init script.
+# 
+# This file should reside at /etc/sysconfig/overcommit
+
+# `service overcommit start' enforces this policy 
+START=/etc/overcommit/never-overcommit.conf
+
+# `service overcommit stop' enforces this policy 
+STOP=/etc/overcommit/default-overcommit.conf

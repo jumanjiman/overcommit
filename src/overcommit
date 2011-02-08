@@ -1,0 +1,146 @@
+#!/bin/bash
+#
+#	/etc/rc.d/init.d/overcommit
+#
+#	Set overcommit policy in the kernel
+#
+# chkconfig: 2345 13 87
+# description: Sets the sysctl vm.overcommit_memory.
+#              There's no daemon or pid file.
+
+### BEGIN INIT INFO
+# ref: http://refspecs.linux-foundation.org/LSB_3.2.0/LSB-Core-generic/LSB-Core-generic/facilname.html
+# Provides: overcommit
+# Required-Start: $syslog
+# Required-Stop: 
+# Default-Start: 2345
+# Default-Stop: 87
+# Short-Description: Set overcommit policy in the kernel.
+# Description:      Modifies the kernel tunables affecting overcommit memory policy.
+### END INIT INFO
+
+
+# exit codes
+  # standard codes per
+  # http://refspecs.freestandards.org/LSB_3.1.1/LSB-Core-generic/LSB-Core-generic/iniscrptact.html
+  rc_OK=0
+  rc_dead_and_pid_file_exists=1
+  rc_dead_and_lock_exists=2
+  rc_not_running=3
+  rc_unimplemented=3
+  rc_unknown=4
+  # app-specific codes (150-199)
+  rc_bad_tracer=150
+  rc_bad_buffer_size=151
+  rc_debugfs_not_mounted=152
+  rc_debugfs_improperly_mounted=153
+
+prog=$(basename $0)
+
+# Source function library.
+. /etc/init.d/functions
+
+# source start/stop options
+[ -r /etc/sysconfig/overcommit ] && . /etc/sysconfig/overcommit
+
+# default start/stop options
+START=${START:-/etc/overcommit/never-overcommit.conf}
+STOP=${STOP:-/etc/overcommit/default-overcommit.conf}
+
+# functions
+
+check_status() {
+	# quietly check:
+	# - debugfs is mounted at /sys/kernel/debug
+	# - actual and configured tracer are the same
+	# - actual and configured buffer size are the same
+	# 
+	# If all the above are true, return 0.
+	# If any is not true, populate the "msg" variable and return non-zero.
+
+	msg=""
+	_rc=0
+	if debugfs_mounted; then
+	  # confirm the correct tracer
+	  _tracer=$(cat /sys/kernel/debug/tracing/current_tracer 2> /dev/null)
+	  if ! [[ "${_tracer}" = "${tracer}" ]]; then
+	    msg="Actual tracer does not match configured tracer."
+	    _rc=$rc_bad_tracer
+	  fi
+
+	  # confirm the correct buffer size
+	  _buffer_size_kb=$(cat /sys/kernel/debug/tracing/buffer_size_kb 2> /dev/null)
+	  if ! [[ "${_buffer_size_kb}" = "${buffer_size_kb}" ]]; then
+	    msg="$msg Actual buffer size does not match configured buffer size."
+	    _rc=$rc_bad_buffer_size
+	  fi
+	else
+	  msg="debugfs is not mounted at /sys/kernel/debug"
+	  _rc=$rc_debugfs_not_mounted
+	fi
+	return $_rc
+}
+
+start() {
+	echo -n "Setting $START: "
+
+	/usr/sbin/apply-sysctl -a $START
+
+	# per 
+	# http://refspecs.freestandards.org/LSB_3.1.1/LSB-Core-generic/LSB-Core-generic/iniscrptact.html
+	# this should return 0 if we are started, even on a service already running
+	check_status
+	_rc=$?
+
+	[ $_rc -eq 0 ] && echo_success || echo_failure
+	echo
+	return $_rc
+}	
+
+stop() {
+	echo -n "Setting $STOP: "
+
+	/usr/sbin/apply-sysctl -a $STOP
+
+	# per 
+	# http://refspecs.freestandards.org/LSB_3.1.1/LSB-Core-generic/LSB-Core-generic/iniscrptact.html
+	# we should return 0 if stopped, even if we were already stopped or not enabled
+	/usr/sbin/apply-sysctl -V $STOP
+	_rc=$?
+
+	[ $_rc -eq 0 ] && echo_success || echo_failure
+	echo
+	return $_rc
+}
+
+status() {
+        echo -n "Status of overcommit policy: "
+
+	/usr/sbin/apply-sysctl -V $START
+	_rc=$?
+
+	[ $_rc -eq 0 ] && echo_success || echo_failure
+	echo
+	return $_rc
+}
+
+case "$1" in
+    start)
+	start
+	;;
+    stop)
+	stop
+	;;
+    status)
+	status
+	;;
+    restart)
+    	stop
+	start
+	;;
+    *)
+	echo "Usage: overcommit {start|stop|status|restart}"
+	exit $rc_unimplemented
+	;;
+esac
+exit $?

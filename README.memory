@@ -1,0 +1,100 @@
+In this README:
+
+* explanation of the `free` command
+* how-to check for memory leaks
+
+
+The `free` command
+==================
+
+Let's look at an actual output...
+
+----
+[morgpau@pc-sc01 ~]$ free -ltm
+             total       used       free     shared    buffers     cached
+Mem:         24156       8753      15403          0        510       5090
+Low:         24156       8753      15403
+High:            0          0          0
+-/+ buffers/cache:       3151      21004
+Swap:          486          0        486
+Total:       24642       8753      15889
+----
+
+In the above command, the `-m` option says we want to see Mebibytes.
+The important lines are:
+
+* Mem: total
+  The answer is 24156 MiB.
+
+* - buffers/cache used 
+  This line shows used if you subtract buffers and cache.
+  The answer is 3151 MiB. This means your system is really only
+  using 3151 MiB of RAM.
+
+* + buffers/cache free
+  This line shows free memory if you add back buffers and cache.
+  The answer is 21004. This means that your system can readily
+  allocate 21004 MiB of RAM.
+
+So, what are `buffers` and `cached`?
+
+* `buffers` refers to memory used to hold filesystem metadata.
+  `cached` refers to memory used to hold filesystem pages.
+
+   This information is available on disk, but it's much faster to
+   look up frequently-accessed info from RAM. If user-space apps
+   need RAM, the kernel will throw away buffers and cache based 
+   on LRU algorithms.
+
+how-to check for memory leaks
+=============================
+
+We're now including valgrind as part of the baseline build.
+From valgrind(1):
+
+   Memcheck performs a range of memory-checking functions,
+   including detecting accesses to uninitialised memory, misuse of
+   allocated memory (double frees, access after free, etc.) and detecting
+   memory leaks.
+
+
+If you want to check a program for memory leaks, start with `valgrind`
+as shown below.
+
+problem scenario: investigate whether the `cat` utility leaks
+                  memory when displaying a file.
+
+solution: run `valgrind --tool=memcheck` as shown here:
+
+$ valgrind --tool=memcheck cat /proc/cpuinfo
+
+==1479== Memcheck, a memory error detector.
+==1479== Copyright (C) 2002-2006, and GNU GPL'd, by Julian Seward et al.
+==1479== Using LibVEX rev 1658, a library for dynamic binary translation.
+==1479== Copyright (C) 2004-2006, and GNU GPL'd, by OpenWorks LLP.
+==1479== Using valgrind-3.2.1, a dynamic binary instrumentation framework.
+==1479== Copyright (C) 2000-2006, and GNU GPL'd, by Julian Seward et al.
+==1479== For more details, rerun with: -v
+==1479== 
+processor	: 0
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 26
+---snip---
+address sizes	: 40 bits physical, 48 bits virtual
+power management:
+
+==1479== 
+==1479== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 4 from 1)
+==1479== malloc/free: in use at exit: 0 bytes in 0 blocks.
+==1479== malloc/free: 31 allocs, 31 frees, 11,864 bytes allocated.
+==1479== For counts of detected errors, rerun with: -v
+==1479== All heap blocks were freed -- no leaks are possible.
+
+
+Notice the lines at the end of the output. The lines show 
+the amount of memory:
+* amount of memory in use after the program finished
+* total memory used and freed during execution
+* how much memory was possibly leaked
+
