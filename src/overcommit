@@ -45,6 +45,17 @@ STOP=${STOP:-/etc/overcommit/default-overcommit.conf}
 
 # functions
 
+status() {
+        echo -n "Status of overcommit policy: "
+
+	/usr/sbin/apply-sysctl -V $START
+	_rc=$?
+
+	[ $_rc -eq 0 ] && echo_success || echo_failure
+	echo
+	return $_rc
+}
+
 start() {
 	echo -n "Setting $START: "
 
@@ -70,17 +81,6 @@ stop() {
 	# http://refspecs.freestandards.org/LSB_3.1.1/LSB-Core-generic/LSB-Core-generic/iniscrptact.html
 	# we should return 0 if stopped, even if we were already stopped or not enabled
 	/usr/sbin/apply-sysctl -V $STOP
-	_rc=$?
-
-	[ $_rc -eq 0 ] && echo_success || echo_failure
-	echo
-	return $_rc
-}
-
-status() {
-        echo -n "Status of overcommit policy: "
-
-	/usr/sbin/apply-sysctl -V $START
 	_rc=$?
 
 	[ $_rc -eq 0 ] && echo_success || echo_failure
